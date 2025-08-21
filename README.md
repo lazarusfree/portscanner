@@ -181,7 +181,7 @@ sudo ./port_scanner.py 192.168.1.1 -s syn
 
 ## License
 
-This project is open source and available under the MIT License.
+This project is open source and available under the GPL-3.0.
 
 ---
 
