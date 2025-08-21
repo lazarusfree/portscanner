@@ -1,0 +1,56 @@
+PORT SCANNER - Made with love by n0vember
+============================================
+
+Files created in /tmp directory:
+
+1. port_scanner.py
+   - Main port scanner script
+   - Features: TCP/SYN/UDP scanning, multi-threading, service detection
+   - Usage: python3 port_scanner.py [target] [options]
+
+2. README.md
+   - Comprehensive documentation
+   - Installation instructions, usage examples, troubleshooting
+   - Complete feature overview and command reference
+
+3. install.sh
+   - Installation script for system-wide deployment
+   - Automatically installs to /usr/local/bin or ~/.local/bin
+   - Adds to PATH and handles permissions
+
+4. demo.sh
+   - Demo script showcasing scanner features
+   - Interactive demonstration of various scanning techniques
+   - Educational tool for learning scanner capabilities
+
+5. FILES_CREATED.txt (this file)
+   - Summary of all created files
+
+QUICK START:
+===========
+
+1. Test the scanner:
+   python3 port_scanner.py localhost -p 80,443,22
+
+2. Install system-wide (optional):
+   sudo ./install.sh
+
+3. Run demo (optional):
+   ./demo.sh
+
+4. View help:
+   python3 port_scanner.py --help
+
+FEATURES:
+=========
+✅ Beautiful ASCII art logo with "Made with love by n0vember"
+✅ Fast multi-threaded scanning
+✅ Multiple scan types (TCP, SYN, UDP)
+✅ Service detection for common ports
+✅ Configurable threads, timeouts, and port ranges
+✅ Colored terminal output
+✅ Graceful error handling and signal management
+✅ Comprehensive scan summaries
+✅ Support for IP addresses and hostnames
+
+Made with love by n0vember ❤️
