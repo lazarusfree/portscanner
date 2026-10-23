@@ -4,17 +4,19 @@ A powerful, fast, and efficient port scanner with nmap-like functionality, built
 
 ## Features
 
-- 🚀 **Fast & Efficient**: Multi-threaded scanning for high performance
-- 🎨 **Beautiful UI**: Colored terminal output with ASCII art logo
-- 🔍 **Multiple Scan Types**: TCP connect, SYN, and UDP scanning
-- 🎯 **Flexible Targeting**: Support for IP addresses and hostnames
-- 📊 **Detailed Output**: Service detection and comprehensive scan summaries
-- ⚡ **Configurable**: Customizable threads, timeouts, and port ranges
-- 🛡️ **Graceful Handling**: Proper signal handling and error management
+- 🚀 **Fast**: asyncio TCP connect scanning with hundreds of connections in flight
+- 🎯 **Accurate**: every port is reported `open`, `closed` (refused) or `filtered` (no answer); local failures such as running out of sockets are reported as errors, never as "closed"
+- 🎨 **Beautiful UI**: Colored terminal output with ASCII art logo (colors turn off when piped or when `NO_COLOR` is set)
+- 🌐 **Flexible Targeting**: IPv4/IPv6 addresses and hostnames, resolved once
+- 📊 **Summary**: open/closed/filtered counts and a service-name hint from the port number
+- ⚡ **Configurable**: concurrency, timeout, retries and port ranges
+- 🛡️ **Strict input**: reversed or out-of-range ports are rejected instead of silently scanning something else
+
+SYN and UDP scanning are not implemented yet.
 
 ## Installation
 
-No installation required! Just make sure you have Python 3.6+ installed:
+No installation required! Just make sure you have Python 3.8+ installed:
 
 ```bash
 python3 --version
@@ -44,17 +46,11 @@ python3 --version
 # Scan a port range
 ./port_scanner.py 10.0.0.1 -p 1-1000
 
-# Use more threads for faster scanning
-./port_scanner.py 192.168.1.1 -t 200
+# More simultaneous connections
+./port_scanner.py 192.168.1.1 -p 1-65535 -c 1000
 
-# SYN scan (requires root privileges)
-sudo ./port_scanner.py 192.168.1.1 -s syn
-
-# UDP scan
-./port_scanner.py 192.168.1.1 -s udp -p 53,123
-
-# Custom timeout
-./port_scanner.py 192.168.1.1 --timeout 5
+# Custom timeout and retries
+./port_scanner.py 192.168.1.1 --timeout 2 --retries 2
 ```
 
 ## Command Line Options
@@ -63,26 +59,24 @@ sudo ./port_scanner.py 192.168.1.1 -s syn
 |--------|-------------|---------|
 | `target` | Target IP address or hostname | Required |
 | `-p, --ports` | Port range to scan (e.g., 1-1000, 80,443,8080) | 1-1024 |
-| `-s, --scan-type` | Scan type: tcp, syn, udp | tcp |
-| `-t, --threads` | Number of threads | 100 |
-| `--timeout` | Connection timeout in seconds | 3 |
+| `-c, --concurrency` (`-t, --threads`) | Simultaneous connection attempts | 500 |
+| `--timeout` | Per-connection timeout in seconds | 1 |
+| `--retries` | Extra attempts for ports that did not answer | 1 |
 
-## Scan Types
+Ports must be in 1-65535 and ranges must run low to high (`100-500`, not `500-100`); anything else is an error and nothing is scanned. Exit status is 1 on bad input and 130 if interrupted.
 
-### TCP Connect Scan (`-s tcp`)
-- Standard TCP connection scan
-- Works without root privileges
-- Most reliable but can be detected by firewalls
+## How results are decided
 
-### SYN Scan (`-s syn`)
-- Stealthy SYN packet scan
-- Requires root privileges
-- Less likely to be logged by target systems
+The scanner is a TCP connect scan. Works without root privileges, and is visible in the target's logs.
 
-### UDP Scan (`-s udp`)
-- UDP packet scanning
-- Useful for discovering UDP services
-- Can be slower due to UDP nature
+| State | Meaning |
+|-------|---------|
+| `open` | the connection completed |
+| `closed` | the target answered with a reset (connection refused) |
+| `filtered` | no answer, or the network reported the host unreachable; re-probed `--retries` times before being reported |
+| `error` | the scan could not test the port locally (out of sockets, access denied); never counted as closed |
+
+If the summary shows errors, lower `--concurrency` and rescan. On Windows the scanner turns off SYN retransmission on its sockets so a refused port fails immediately instead of after ~2 s; if that is unavailable it warns that `--timeout` should be at least 2.5.
 
 ## Examples
 
@@ -144,10 +138,9 @@ Made with love by n0vember
 
 ## Performance Tips
 
-1. **Increase threads** for faster scanning: `-t 200`
-2. **Reduce timeout** for faster results: `--timeout 1`
-3. **Use SYN scan** when possible (requires root)
-4. **Target specific ports** instead of full ranges when possible
+1. **Raise concurrency** for big ranges: `-c 1000` (it is capped by the open-file limit on Linux/macOS)
+2. **Lower the timeout** on fast networks: `--timeout 0.3`; a timeout shorter than the round trip makes open ports look filtered
+3. **Target specific ports** instead of full ranges when possible
 
 ## Security Notice
 
@@ -155,22 +148,22 @@ Made with love by n0vember
 
 ## Requirements
 
-- Python 3.6 or higher
+- Python 3.8 or higher
 - Standard library modules (no external dependencies)
-- Root privileges for SYN scanning
+- `pytest` to run the tests (`python -m pytest tests`)
 
 ## Troubleshooting
 
-### Permission Denied for SYN Scan
-```bash
-# Use sudo for SYN scans
-sudo ./port_scanner.py 192.168.1.1 -s syn
-```
-
 ### Slow Scanning
 ```bash
-# Increase threads and reduce timeout
-./port_scanner.py 192.168.1.1 -t 200 --timeout 1
+# More connections in flight, shorter timeout, no re-probing
+./port_scanner.py 192.168.1.1 -c 1000 --timeout 0.5 --retries 0
+```
+
+### "could not be tested" errors in the summary
+```bash
+# The OS ran out of sockets: lower concurrency
+./port_scanner.py 192.168.1.1 -c 200
 ```
 
 ### Hostname Resolution Issues
